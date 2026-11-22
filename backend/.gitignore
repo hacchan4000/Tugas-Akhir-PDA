@@ -17,6 +17,13 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Database lokal
+*.db
+*.sqlite3
+
+# Cache eksperimen notebook (artifacts/ tetap di-commit)
+experiments/
+
 # FastAPI / Uvicorn / Logs
 *.log
 
