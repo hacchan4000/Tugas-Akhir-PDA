@@ -1,0 +1,1 @@
+"""BASARNAS landslide classification backend."""
