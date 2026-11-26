@@ -77,8 +77,8 @@ def upgrade() -> None:
         sa.Column("input_id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("event_date", sa.Date(), nullable=False),
-        sa.Column("latitude", sa.Float(), nullable=False),
-        sa.Column("longitude", sa.Float(), nullable=False),
+        sa.Column("latitude", sa.Double(), nullable=False),
+        sa.Column("longitude", sa.Double(), nullable=False),
         sa.Column("landslide_category", sa.String(length=50), nullable=False),
         sa.Column("landslide_trigger", sa.String(length=50), nullable=False),
         sa.Column("landslide_setting", sa.String(length=50), nullable=False),
@@ -99,7 +99,9 @@ def upgrade() -> None:
         ),
     )
     op.create_index(
-        "ix_input_data_user_created", "input_data", ["user_id", "created_at"]
+        "ix_input_data_user_created",
+        "input_data",
+        ["user_id", sa.text("created_at DESC")],
     )
     op.create_index(
         "ix_input_data_user_region", "input_data", ["user_id", "nama_wilayah"]
@@ -111,7 +113,7 @@ def upgrade() -> None:
         sa.Column("input_id", sa.Integer(), nullable=False),
         sa.Column("model_id", sa.Integer(), nullable=False),
         sa.Column("predicted_class", sa.String(length=10), nullable=False),
-        sa.Column("confidence_score", sa.Float(), nullable=False),
+        sa.Column("confidence_score", sa.Double(), nullable=False),
         sa.Column("probabilities", JSON_TYPE, nullable=False),
         sa.Column(
             "status",
@@ -146,20 +148,23 @@ def upgrade() -> None:
     )
     op.create_index("ix_predictions_input_id", "predictions", ["input_id"])
     op.create_index("ix_predictions_model_id", "predictions", ["model_id"])
+    op.create_index("ix_predictions_predicted_class", "predictions", ["predicted_class"])
     op.create_index(
-        "ix_predictions_predicted_class", "predictions", ["predicted_class"]
+        "ix_predictions_date_id",
+        "predictions",
+        ["prediction_date", "prediction_id"],
     )
 
     # Supabase: aktifkan RLS tanpa policy (akses hanya via backend/service role).
     if op.get_bind().dialect.name == "postgresql":
         for table in TABLES:
-            op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
+            op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
 
 
 def downgrade() -> None:
     if op.get_bind().dialect.name == "postgresql":
         for table in TABLES:
-            op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;")
+            op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
 
     op.drop_index("ix_predictions_predicted_class", table_name="predictions")
     op.drop_index("ix_predictions_model_id", table_name="predictions")

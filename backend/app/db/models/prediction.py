@@ -5,7 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, JSON, String
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Double,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -52,7 +60,7 @@ class Prediction(Base):
         nullable=False,
         index=True,
     )
-    confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Double, nullable=False)
     probabilities: Mapped[dict[str, Any]] = mapped_column(
         JsonType, nullable=False, default=dict
     )

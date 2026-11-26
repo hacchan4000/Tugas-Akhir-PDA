@@ -87,7 +87,10 @@ def decode_access_token(token: str) -> int:
     subject = payload.get("sub")
     if subject is None:
         raise jwt.InvalidTokenError("token tidak memiliki subject")
-    return int(subject)
+    try:
+        return int(subject)
+    except (TypeError, ValueError) as exc:
+        raise jwt.InvalidTokenError("subject bukan integer") from exc
 
 
 __all__ = [

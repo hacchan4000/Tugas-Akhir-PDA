@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     COOKIE_SECURE: bool = False
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
 
+    # --- Rate limit login -------------------------------------------------
+    # Dihitung per alamat IP klien dan disimpan di memori proses (lihat
+    # app/utils/rate_limit.py untuk batasannya).
+    LOGIN_MAX_ATTEMPTS: int = Field(default=5, ge=1, le=100)
+    LOGIN_WINDOW_SECONDS: int = Field(default=300, ge=1, le=24 * 60 * 60)
+
     # --- CORS -------------------------------------------------------------
     CORS_ORIGINS: str = "http://localhost:3000"
 
@@ -85,6 +91,19 @@ class Settings(BaseSettings):
             raise ValueError(
                 "COOKIE_SAMESITE='none' mewajibkan COOKIE_SECURE=true "
                 "(browser menolak cookie SameSite=None tanpa Secure)"
+            )
+        if "*" in self.cors_origins:
+            # CORS dengan wildcard + cookie = siapa pun bisa membaca respons
+            # atas nama operator yang sedang login. Starlette bahkan memantulkan
+            # origin pemanggil, jadi tidak ada perlindungan sama sekali.
+            raise ValueError(
+                "CORS_ORIGINS tidak boleh '*' karena cookie sesi dikirim "
+                "(allow_credentials=true). Sebutkan origin frontend secara eksplisit."
+            )
+        if self.ENV == "production" and not self.COOKIE_SECURE:
+            raise ValueError(
+                "ENV=production mewajibkan COOKIE_SECURE=true supaya cookie sesi "
+                "tidak terkirim lewat HTTP."
             )
         if self.ENV == "production" and self.is_insecure_secret:
             raise ValueError(

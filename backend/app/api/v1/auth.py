@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+import math
+from datetime import timedelta
 
-from app.config import Settings, get_settings
-from app.dependencies.deps import CurrentUser, DbSession
+from fastapi import APIRouter, HTTPException, Request, Response, status
+
+from app.dependencies.deps import AppSettings, CurrentUser, DbSession, LoginLimiterDep
 from app.schemas.auth import LoginRequest, UserResponse
 from app.services import auth_service
 from app.utils.security import create_access_token
@@ -13,21 +15,55 @@ from app.utils.security import create_access_token
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
+def _client_key(request: Request) -> str:
+    """Kunci pembatas laju: alamat klien, bukan email.
+
+    Memakai email akan membuat penyerang bisa mengunci akun operator tertentu
+    hanya dengan salah password berulang kali. Konsekuensinya, beberapa operator
+    di balik satu NAT berbagi kuota — trade-off yang disengaja.
+    """
+    client = request.client
+    return client.host if client is not None else "unknown"
+
+
 @router.post("/login", response_model=UserResponse)
 def login(
     payload: LoginRequest,
+    request: Request,
     response: Response,
     db: DbSession,
-    settings: Settings = Depends(get_settings),
+    limiter: LoginLimiterDep,
+    settings: AppSettings,
 ) -> UserResponse:
+    key = _client_key(request)
+    retry_after = limiter.retry_after(key)
+    if retry_after > 0:
+        detik = max(1, math.ceil(retry_after))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Terlalu banyak percobaan login gagal. "
+                f"Coba lagi dalam {detik} detik."
+            ),
+            headers={"Retry-After": str(detik)},
+        )
+
     user = auth_service.authenticate(db, payload.email, payload.password)
     if user is None:
+        limiter.record(key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email atau password salah",
         )
 
-    token = create_access_token(user.user_id)
+    # Login berhasil mengosongkan hitungan: operator sah yang sempat salah
+    # password tidak perlu menunggu jendela waktu habis.
+    limiter.reset(key)
+
+    token = create_access_token(
+        user.user_id,
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
     response.set_cookie(
         key=settings.COOKIE_NAME,
         value=token,
@@ -44,7 +80,7 @@ def login(
 def logout(
     response: Response,
     _user: CurrentUser,
-    settings: Settings = Depends(get_settings),
+    settings: AppSettings,
 ) -> None:
     response.delete_cookie(
         key=settings.COOKIE_NAME,

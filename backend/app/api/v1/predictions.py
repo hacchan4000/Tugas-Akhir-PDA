@@ -73,7 +73,7 @@ def export_predictions(
         region=region,
         q=q,
     )
-    items = HistoryService(db).all_for_export(current_user.user_id, query)
+    items = HistoryService(db).iter_for_export(current_user.user_id, query)
     return StreamingResponse(
         stream_csv(items),
         media_type="text/csv; charset=utf-8",

@@ -9,7 +9,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Float,
+    Double,
     ForeignKey,
     Index,
     Integer,
@@ -47,8 +47,8 @@ class InputData(Base):
         nullable=False,
     )
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
-    latitude: Mapped[float] = mapped_column(Float, nullable=False)
-    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    latitude: Mapped[float] = mapped_column(Double, nullable=False)
+    longitude: Mapped[float] = mapped_column(Double, nullable=False)
     landslide_category: Mapped[str] = mapped_column(String(50), nullable=False)
     landslide_trigger: Mapped[str] = mapped_column(String(50), nullable=False)
     landslide_setting: Mapped[str] = mapped_column(String(50), nullable=False)

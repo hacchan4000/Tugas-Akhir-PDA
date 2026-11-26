@@ -24,33 +24,62 @@ from app.db.session import SessionLocal
 from app.services.geocoding_service import GeocodingService
 from app.services.model_service import ModelService
 from app.utils.errors import ApiValidationError, ModelUnavailableError, PersistenceError
+from app.utils.rate_limit import SlidingWindowLimiter
 
 logger = logging.getLogger(__name__)
 
 # Pesan validasi Pydantic (Inggris) -> Indonesia, sesuai SPEC bagian 4.
+# Kunci = `error["type"]` Pydantic v2. Yang tidak ada di sini akan bocor sebagai
+# teks Inggris, jadi tambahkan kunci baru setiap kali schema berubah
+# (`tests/test_error_messages.py` gagal kalau ada yang terlewat).
 _ERROR_MESSAGES: dict[str, str] = {
     "missing": "field wajib diisi",
     "extra_forbidden": "field tidak dikenal",
+    "model_type": "body harus berupa objek JSON",
     "date_parsing": "format tanggal harus YYYY-MM-DD",
     "date_from_datetime_parsing": "format tanggal harus YYYY-MM-DD",
+    "date_from_datetime_inexact": "tanggal tidak boleh memuat jam",
     "datetime_parsing": "format tanggal/waktu tidak valid",
+    "time_parsing": "format waktu tidak valid",
+    "greater_than": "nilai harus lebih besar dari batas minimum",
     "greater_than_equal": "nilai di bawah batas minimum",
+    "less_than": "nilai harus lebih kecil dari batas maksimum",
     "less_than_equal": "nilai di atas batas maksimum",
     "string_too_short": "teks terlalu pendek",
     "string_too_long": "teks terlalu panjang",
+    "string_type": "harus berupa teks",
+    "string_pattern_mismatch": "format teks tidak sesuai",
     "int_parsing": "harus berupa bilangan bulat",
+    "int_type": "harus berupa bilangan bulat",
     "float_parsing": "harus berupa angka",
+    "float_type": "harus berupa angka",
+    "finite_number": "harus berupa angka hingga (bukan NaN atau Infinity)",
+    "decimal_parsing": "harus berupa angka desimal",
     "bool_parsing": "harus berupa boolean",
+    "bool_type": "harus berupa boolean",
+    "list_type": "harus berupa daftar",
+    "dict_type": "harus berupa objek",
+    "url_parsing": "format URL tidak valid",
     "json_invalid": "body JSON tidak valid",
     "email_str": "format email tidak valid",
     "value_error": "nilai tidak valid",
 }
+
+# Pesan bawaan Pydantic/email-validator yang perlu diterjemahkan walau tipenya
+# `value_error` (tipe itu juga dipakai validator kita sendiri yang sudah
+# berbahasa Indonesia, jadi tidak boleh ditimpa mentah-mentah).
+_VALUE_ERROR_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("value is not a valid email address", "format email tidak valid"),
+)
 
 
 def _translate(error: dict[str, Any]) -> str:
     message = str(error.get("msg", "nilai tidak valid"))
     message = message.removeprefix("Value error, ")
     if error.get("type") == "value_error":
+        for prefix, terjemahan in _VALUE_ERROR_PREFIXES:
+            if message.startswith(prefix):
+                return terjemahan
         return message
     return _ERROR_MESSAGES.get(str(error.get("type")), message)
 
@@ -88,11 +117,12 @@ def _sync_model_registry(model_service: ModelService) -> None:
 
             comparator = info.get("comparator_info")
             if isinstance(comparator, dict) and comparator.get("model_name"):
+                comp_params = comparator.get("best_params")
                 model_repo.upsert_comparator(
                     db,
                     model_name=str(comparator["model_name"])[:50],
                     model_version=info["model_version"],
-                    best_params={},
+                    best_params=comp_params if isinstance(comp_params, dict) else None,
                     trained_date=trained_date,
                 )
             db.commit()
@@ -101,6 +131,16 @@ def _sync_model_registry(model_service: ModelService) -> None:
             "Registri model tidak tersinkron (%s). "
             "Pastikan tabel sudah dibuat: `alembic upgrade head`.",
             exc.__class__.__name__,
+        )
+        logger.debug("Detail sinkronisasi model", exc_info=True)
+    except Exception as exc:  # noqa: BLE001 - sinkronisasi registri bukan syarat hidup
+        # Registri hanya metadata untuk halaman info model. Kalau artefak
+        # menghasilkan nilai aneh (mis. `trained_date` bukan datetime), API tetap
+        # harus melayani prediksi daripada mati saat startup.
+        logger.warning(
+            "Registri model gagal disinkronkan (%s): %s",
+            type(exc).__name__,
+            exc,
         )
         logger.debug("Detail sinkronisasi model", exc_info=True)
 
@@ -131,6 +171,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
         lifespan=lifespan,
+    )
+    # Disimpan di app.state supaya dependency membaca settings milik app ini,
+    # bukan cache global `get_settings()` (penting saat tes membuat app khusus).
+    app.state.settings = settings
+    app.state.login_limiter = SlidingWindowLimiter(
+        settings.LOGIN_MAX_ATTEMPTS, settings.LOGIN_WINDOW_SECONDS
     )
 
     app.add_middleware(
