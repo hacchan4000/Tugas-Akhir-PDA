@@ -1,0 +1,288 @@
+{
+  "model_type": "random_forest",
+  "model_name": "Random Forest",
+  "version": "v1",
+  "trained_at": "2026-11-25T18:20:40.140133+00:00",
+  "best_params": {
+    "n_estimators": 300,
+    "max_depth": 20,
+    "max_features": null
+  },
+  "seed": 42,
+  "holdout_ratio": 0.2,
+  "n_train": 8118,
+  "n_test": 2027,
+  "feature_names": [
+    "month_sin",
+    "month_cos",
+    "geo_x",
+    "geo_y",
+    "geo_z",
+    "landslide_category",
+    "landslide_trigger",
+    "landslide_setting",
+    "location_accuracy"
+  ],
+  "numeric_features": [
+    "month_sin",
+    "month_cos",
+    "geo_x",
+    "geo_y",
+    "geo_z"
+  ],
+  "categorical_features": [
+    "landslide_category",
+    "landslide_trigger",
+    "landslide_setting",
+    "location_accuracy"
+  ],
+  "d_enc": 60,
+  "class_labels": [
+    "small",
+    "medium",
+    "large"
+  ],
+  "valid_categories": {
+    "landslide_category": [
+      "complex",
+      "creep",
+      "debris_flow",
+      "earth_flow",
+      "lahar",
+      "landslide",
+      "mudslide",
+      "other",
+      "riverbank_collapse",
+      "rock_fall",
+      "snow_avalanche",
+      "topple",
+      "translational_slide",
+      "unknown"
+    ],
+    "landslide_trigger": [
+      "construction",
+      "continuous_rain",
+      "dam_embankment_collapse",
+      "downpour",
+      "earthquake",
+      "flooding",
+      "freeze_thaw",
+      "leaking_pipe",
+      "mining",
+      "monsoon",
+      "no_apparent_trigger",
+      "other",
+      "rain",
+      "snowfall_snowmelt",
+      "tropical_cyclone",
+      "unknown",
+      "vibration",
+      "volcano"
+    ],
+    "landslide_setting": [
+      "above_coast",
+      "above_river",
+      "above_road",
+      "below_road",
+      "bluff",
+      "burned_area",
+      "deforested_slope",
+      "engineered_slope",
+      "mine",
+      "natural_slope",
+      "other",
+      "retaining_wall",
+      "unknown",
+      "urban"
+    ],
+    "location_accuracy": [
+      "100km",
+      "10km",
+      "1km",
+      "250km",
+      "25km",
+      "50km",
+      "5km",
+      "exact",
+      "unknown"
+    ]
+  },
+  "coordinate_bounds": {
+    "latitude": [
+      -90.0,
+      90.0
+    ],
+    "longitude": [
+      -180.0,
+      180.0
+    ]
+  },
+  "evaluation_metrics": {
+    "macro_f1": 0.5327222614425197,
+    "balanced_accuracy": 0.519472022625889,
+    "accuracy": 0.7217562900838678,
+    "precision_macro": 0.6118605017911668,
+    "recall_macro": 0.519472022625889,
+    "confusion_matrix": [
+      [
+        325,
+        221,
+        5
+      ],
+      [
+        167,
+        1119,
+        20
+      ],
+      [
+        9,
+        142,
+        19
+      ]
+    ],
+    "labels": [
+      "small",
+      "medium",
+      "large"
+    ],
+    "per_class": {
+      "small": {
+        "precision": 0.6487025948103793,
+        "recall": 0.5898366606170599,
+        "f1": 0.6178707224334601,
+        "support": 551
+      },
+      "medium": {
+        "precision": 0.7550607287449392,
+        "recall": 0.8568147013782542,
+        "f1": 0.8027259684361548,
+        "support": 1306
+      },
+      "large": {
+        "precision": 0.4318181818181818,
+        "recall": 0.11176470588235295,
+        "f1": 0.17757009345794394,
+        "support": 170
+      }
+    }
+  },
+  "comparator_info": {
+    "model_name": "KNN",
+    "best_params": {
+      "k": 5,
+      "weights": "distance",
+      "metric": "manhattan"
+    },
+    "mean_test_macro_f1": 0.5085,
+    "artifact_file": "knn_store.npz"
+  },
+  "experiment_summary": [
+    {
+      "algoritma": "KNN",
+      "test_size": 0.1,
+      "n_train": 9132,
+      "n_test": 1013,
+      "cv_macro_f1": 0.5163,
+      "cv_std": 0.0136,
+      "test_macro_f1": 0.5165,
+      "test_bal_acc": 0.5065,
+      "test_acc": 0.694,
+      "recall_large": 0.1294,
+      "best_params": {
+        "k": 7,
+        "weights": "distance",
+        "metric": "manhattan"
+      }
+    },
+    {
+      "algoritma": "KNN",
+      "test_size": 0.15,
+      "n_train": 8625,
+      "n_test": 1520,
+      "cv_macro_f1": 0.5145,
+      "cv_std": 0.0041,
+      "test_macro_f1": 0.5077,
+      "test_bal_acc": 0.4978,
+      "test_acc": 0.6724,
+      "recall_large": 0.1562,
+      "best_params": {
+        "k": 5,
+        "weights": "distance",
+        "metric": "manhattan"
+      }
+    },
+    {
+      "algoritma": "KNN",
+      "test_size": 0.2,
+      "n_train": 8118,
+      "n_test": 2027,
+      "cv_macro_f1": 0.5124,
+      "cv_std": 0.0136,
+      "test_macro_f1": 0.5013,
+      "test_bal_acc": 0.4924,
+      "test_acc": 0.6759,
+      "recall_large": 0.1353,
+      "best_params": {
+        "k": 5,
+        "weights": "distance",
+        "metric": "manhattan"
+      }
+    },
+    {
+      "algoritma": "Random Forest",
+      "test_size": 0.1,
+      "n_train": 9132,
+      "n_test": 1013,
+      "cv_macro_f1": 0.5216,
+      "cv_std": 0.0097,
+      "test_macro_f1": 0.5402,
+      "test_bal_acc": 0.524,
+      "test_acc": 0.7196,
+      "recall_large": 0.1294,
+      "best_params": {
+        "n_estimators": 200,
+        "max_depth": 30,
+        "max_features": null
+      }
+    },
+    {
+      "algoritma": "Random Forest",
+      "test_size": 0.15,
+      "n_train": 8625,
+      "n_test": 1520,
+      "cv_macro_f1": 0.5239,
+      "cv_std": 0.0151,
+      "test_macro_f1": 0.5355,
+      "test_bal_acc": 0.5229,
+      "test_acc": 0.7237,
+      "recall_large": 0.1094,
+      "best_params": {
+        "n_estimators": 300,
+        "max_depth": null,
+        "max_features": null
+      }
+    },
+    {
+      "algoritma": "Random Forest",
+      "test_size": 0.2,
+      "n_train": 8118,
+      "n_test": 2027,
+      "cv_macro_f1": 0.5195,
+      "cv_std": 0.019,
+      "test_macro_f1": 0.5327,
+      "test_bal_acc": 0.5195,
+      "test_acc": 0.7218,
+      "recall_large": 0.1118,
+      "best_params": {
+        "n_estimators": 300,
+        "max_depth": 20,
+        "max_features": null
+      }
+    }
+  ],
+  "artifact_files": {
+    "preprocessor": "preprocessor.json",
+    "model": "rf_trees.npz",
+    "comparator": "knn_store.npz"
+  }
+}

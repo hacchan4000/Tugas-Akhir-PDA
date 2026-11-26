@@ -107,13 +107,30 @@ class ModelService:
 
     # -- pemuatan ----------------------------------------------------------
     def load(self) -> bool:
-        """Muat artefak. Kembalikan False (tanpa crash) bila belum tersedia."""
+        """Muat artefak. Kembalikan False (tanpa crash) bila belum tersedia.
+
+        Sengaja menangkap ``Exception``, bukan daftar tipe tertentu. Artefak
+        adalah berkas di disk yang bisa terpotong (notebook dihentikan saat
+        menulis, disk penuh, salinan gagal), dan ``np.load`` melempar
+        ``zipfile.BadZipFile`` / ``EOFError`` untuk kasus itu — keduanya di luar
+        ``OSError``/``ValueError``. Daftar tipe yang sempit membuat satu berkas
+        rusak menjatuhkan seluruh proses saat startup, padahal kontraknya
+        (README + SPEC §2.4) adalah API tetap hidup dengan ``model_ready=false``.
+        ``KeyboardInterrupt``/``SystemExit`` tetap lolos karena bukan ``Exception``.
+        """
         try:
             self._load()
-        except (ModelUnavailableError, OSError, ValueError, KeyError, TypeError) as exc:
+        except Exception as exc:  # noqa: BLE001 - lihat docstring di atas
             self._ready = False
-            self._error = str(exc)
+            # Pesan terkurasi (ModelUnavailableError) dipakai apa adanya; error
+            # tak terduga diberi nama tipenya supaya /health bisa didiagnosis.
+            self._error = (
+                str(exc)
+                if isinstance(exc, ModelUnavailableError)
+                else f"{type(exc).__name__}: {exc}"
+            )
             logger.error("Artefak model gagal dimuat dari %s: %s", self._dir, exc)
+            logger.debug("Detail kegagalan muat artefak", exc_info=True)
             return False
 
         self._ready = True
@@ -214,7 +231,11 @@ class ModelService:
             for column in CATEGORICAL:
                 values = raw.get(column)
                 if isinstance(values, (list, tuple)) and values:
-                    resolved[column] = [str(v) for v in values]
+                    cleaned = sorted(
+                        {str(v).strip().lower() for v in values if str(v).strip()}
+                    )
+                    if cleaned:
+                        resolved[column] = cleaned
 
         if len(resolved) != len(CATEGORICAL):
             # Fallback: kategori yang benar-benar dipelajari one-hot encoder.
@@ -222,7 +243,9 @@ class ModelService:
             categories = getattr(encoder, "categories_", None) or []
             columns = list(getattr(preprocessor, "categorical_columns", CATEGORICAL))
             for column, values in zip(columns, categories):
-                resolved.setdefault(column, [str(v) for v in values])
+                resolved.setdefault(
+                    column, sorted({str(v).strip().lower() for v in values if str(v).strip()})
+                )
 
         missing = [c for c in CATEGORICAL if not resolved.get(c)]
         if missing:
@@ -257,6 +280,13 @@ class ModelService:
         row = row / total if total > 0 else np.full(row.shape, 1.0 / row.size)
 
         index = int(self._estimator.predict(vector)[0])
+        # Indeks negatif akan lolos diam-diam di Python (`labels[-1]` = kelas
+        # terakhir), jadi batas bawah ikut diperiksa — bukan hanya atas.
+        if not 0 <= index < len(self._class_labels):
+            raise ModelUnavailableError(
+                f"estimator memprediksi indeks kelas {index}, di luar rentang "
+                f"0..{len(self._class_labels) - 1}"
+            )
         label = self._class_labels[index]
         probabilities = {
             label_name: float(prob)
