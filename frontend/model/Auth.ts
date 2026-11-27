@@ -1,5 +1,10 @@
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
 export interface RegisterProps {
-  name:string;
-  email:string;
-  password:string;
-} 
+  name: string;
+  email: string;
+  password: string;
+}

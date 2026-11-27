@@ -1,36 +1,26 @@
-import { ApiService } from "./api.service"
+import { User } from '@/model/User';
+import { ApiService } from './api.service';
 
 export const AuthService = {
-  login:(email:string, password:string)=>{
-    return ApiService({
-      url:'authentications',
-      method:'POST',
-      body:{ email,password },
-      authorization:false
-    })
+  login: (email: string, password: string): Promise<User> => {
+    return ApiService<User>({
+      url: '/auth/login',
+      method: 'POST',
+      body: { email, password },
+    });
   },
 
-  register:(name:string,email:string,password:string)=>{
-    return ApiService({
-      url:'users',
-      method:'POST',
-      body:{name,email,password},
-      authorization:false
-    })
+  logout: (): Promise<void> => {
+    return ApiService<void>({
+      url: '/auth/logout',
+      method: 'POST',
+    });
   },
 
-  refresh:(token:string)=>{
-    return ApiService({
-      url:'authentications',
-      method:'PUT',
-      body:{ refreshToken: token }
-    })
+  me: (): Promise<User> => {
+    return ApiService<User>({
+      url: '/auth/me',
+      method: 'GET',
+    });
   },
-
-  logout:()=>{
-    return ApiService({
-      url:'authentications',
-      method:'DELETE'
-    })
-  },
-}
+};

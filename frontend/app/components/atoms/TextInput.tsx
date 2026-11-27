@@ -15,6 +15,8 @@ interface TextInputProps {
   type?: string;
   variant?: Variant;
   disabled?: boolean;
+  placeholder?: string;
+  step?: string;
 }
 
 export default function TextInput({
@@ -24,42 +26,51 @@ export default function TextInput({
   className = '',
   error,
   type = 'text',
-  variant = 'standard',
+  variant = 'outlined',
   disabled = false,
+  placeholder,
+  step,
 }: TextInputProps) {
   const [showPassword, setShowPassword] = React.useState(false);
 
   const isPasswordType = type === 'password';
 
-  // Determine input type
   const inputType = React.useMemo(() => {
     if (!isPasswordType) return type;
     return showPassword ? 'text' : 'password';
   }, [type, isPasswordType, showPassword]);
 
+  const hasValue = value !== '' && value !== null && value !== undefined;
+
   return (
-    <div className={`flex w-full flex-col gap-1 pt-4 ${className}`}>
+    <div className={`flex w-full flex-col gap-1.5 ${className}`}>
       {variant === 'outlined' && (
-        <label className="text-sm font-medium text-gray-600">{label}</label>
+        <label className="text-[13px] font-bold tracking-[0.15px] text-[#251918]">
+          {label}
+        </label>
       )}
 
       <TextField
         label={variant === 'standard' ? label : ''}
-        value={value}
+        value={value ?? ''}
         onChange={onChange}
         fullWidth
         type={inputType}
+        placeholder={placeholder}
         error={!!error}
         helperText={error}
         variant={variant}
         disabled={disabled}
         slotProps={{
+          htmlInput: step ? { step } : undefined,
           input: {
             endAdornment: isPasswordType && (
               <InputAdornment position="end">
                 <IconButton
                   onClick={() => setShowPassword((prev) => !prev)}
                   edge="end"
+                  aria-label="Tampilkan atau sembunyikan password"
+                  sx={{ color: '#58413F' }}
                 >
                   {showPassword ? <MdVisibility /> : <MdVisibilityOff />}
                 </IconButton>
@@ -70,66 +81,73 @@ export default function TextInput({
             variant === 'standard'
               ? {
                   sx: {
-                    fontFamily: 'Poppins, Arial, sans-serif',
-                    fontSize: '18px',
-                    fontWeight: 400,
-                    color:
-                      value !== '' && value !== null
-                        ? 'var(--color-gray-500)'
-                        : 'var(--color-gray-200)',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    color: hasValue ? '#58413F' : '#8B716E',
                     '&.Mui-focused': {
-                      color: 'var(--color-gray-500)',
+                      color: '#7E1117',
                     },
                     '&.Mui-error': {
-                      color: 'var(--color-red-500)',
+                      color: '#BA1A1A',
                     },
                   },
                 }
               : { shrink: true },
         }}
         sx={{
+          '& .MuiFormHelperText-root': {
+            marginLeft: 0,
+            fontSize: '12px',
+            color: '#BA1A1A',
+          },
           ...(variant === 'standard' && {
+            '& .MuiInput-input': {
+              color: '#251918',
+              fontSize: '15px',
+            },
             '& .MuiInput-root:after': {
-              borderBottomColor: 'var(--color-primary)',
+              borderBottomColor: '#7E1117',
               borderBottomWidth: '2px',
             },
             '& .MuiInput-root:hover:not(.Mui-disabled):before': {
-              borderBottomColor: 'var(--color-primary)',
+              borderBottomColor: '#7E1117',
             },
             '& .MuiInput-root:before': {
-              borderBottomColor:
-                value !== '' && value !== null
-                  ? 'var(--color-primary)'
-                  : 'var(--color-gray-400)',
-              borderBottomWidth:
-                value !== '' && value !== null ? '2px' : '0.5px',
+              borderBottomColor: hasValue ? '#7E1117' : '#DFBFBC',
+              borderBottomWidth: hasValue ? '2px' : '1px',
             },
           }),
-
           ...(variant === 'outlined' && {
             '& .MuiOutlinedInput-root': {
-              borderRadius: '6px',
+              borderRadius: '12px',
+              backgroundColor: '#FFFFFF',
+              color: '#251918',
+              transition: 'border-color 150ms cubic-bezier(0.2, 0, 0, 1)',
               '& fieldset': {
-                borderColor: 'var(--color-gray-200)',
+                borderColor: '#DFBFBC',
                 borderWidth: '1px',
               },
               '&:hover fieldset': {
-                borderColor: 'var(--color-gray-200)',
+                borderColor: '#8B716E',
               },
               '&.Mui-focused fieldset': {
-                borderColor: 'var(--color-gray-200)',
+                borderColor: '#7E1117',
                 borderWidth: '2px',
               },
               '&.Mui-error fieldset': {
-                borderColor: 'var(--color-red-500)',
+                borderColor: '#BA1A1A',
               },
             },
-
             '& .MuiOutlinedInput-input': {
-              paddingTop: '8px',
-              paddingBottom: '8px',
+              paddingTop: '10px',
+              paddingBottom: '10px',
               paddingLeft: '14px',
               paddingRight: '14px',
+              fontSize: '14px',
+              '&::placeholder': {
+                color: '#8B716E',
+                opacity: 1,
+              },
             },
           }),
         }}

@@ -1,92 +1,106 @@
-'use client'
+'use client';
 
-import React, { createContext, useState, useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation';
-import { AuthService } from '@/services/api/auth.service';
+import React, { createContext, useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { showToast } from '@/app/components/atoms/toast';
+import { User } from '@/model/User';
+import { AuthService } from '@/services/api/auth.service';
 import { getErrorMessage } from '@/utils/handleError';
-import { Users } from '../model/User';
-
 
 interface AuthContextProps {
-  user:Users | null;
-  login:(email:string,password:string)=>Promise<any>;
-  register:(name:string,email:string,password:string)=>Promise<any>;
-  logout:()=>void;
-  getToken:()=>string | null;
+  user: User | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<User | null>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
-export const AuthContext = createContext<AuthContextProps>({ // ini buat objek global
-  user:null,
-  login: async () => {},
-  register: async () => {},
-  logout: () => {},
-  getToken: () => '',
-})
+export const AuthContext = createContext<AuthContextProps>({
+  user: null,
+  loading: true,
+  isAuthenticated: false,
+  login: async () => null,
+  logout: async () => {},
+  refreshUser: async () => null,
+});
 
-export const AuthProvider = ({children}:{children:React.ReactNode}) => {
-  const [user, setUser] = useState<Users | null>(null)
-  const [loading, setLoading] = useState(true)
-  const navigation = useRouter();
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
 
-  const login = async (email: string, password: string) => {
+  const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
-      setLoading(true)
-
-      const hasil = await AuthService.login(email, password)
-      if (hasil?.access_token) {
-        localStorage.setItem('token', hasil.access_token)
-      }
-
-      setUser(hasil.data)
-      showToast('Success login', 'success')
-      navigation.push('/home')
-      return hasil
-
-    } catch (error) {
-      const pesan = getErrorMessage(error)
-      showToast(pesan, 'error');
+      const currentUser = await AuthService.me();
+      setUser(currentUser);
+      return currentUser;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
     }
-    
-  }
-  const logout = async () => {
-    localStorage.removeItem('token');
-    navigation.push('/login')
-  }
-  const getToken = ():string | null => {
-     if (typeof window === 'undefined') return null;
+  }, []);
 
-    return localStorage.getItem('token');
-    // OR cookies depending on your implementation
-  }
-  const register = async(name:string,email:string,password:string) => {
-    try{
-    
-      const hasil = await AuthService.register(name, email, password)
-      if(hasil){
-        localStorage.setItem('token', hasil.access_token)
+  useEffect(() => {
+    let active = true;
+    AuthService.me()
+      .then((currentUser) => {
+        if (active) setUser(currentUser);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<User | null> => {
+      try {
+        const loggedInUser = await AuthService.login(email, password);
+        setUser(loggedInUser);
+        showToast(`Selamat datang, ${loggedInUser.name}`, 'success');
+        router.push('/');
+        return loggedInUser;
+      } catch (error) {
+        const message = getErrorMessage(error);
+        showToast(message, 'error');
+        return null;
       }
+    },
+    [router]
+  );
 
-      showToast(
-      'Register successful',
-      'success'
-    );
-
-      navigation.push('/login')
-    }catch (error){
-      const pesan = getErrorMessage(error)
-
-      showToast(
-      pesan,
-      'error'
-    );
-    throw error
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      await AuthService.logout();
+    } catch {
+      // Abaikan jika sesi sudah kedaluwarsa di server
+    } finally {
+      setUser(null);
+      showToast('Sesi operator berakhir', 'info');
+      router.push('/login');
     }
-    
-  }
+  }, [router]);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, getToken, register}}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isAuthenticated: Boolean(user),
+        login,
+        logout,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};

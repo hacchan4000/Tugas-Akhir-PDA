@@ -1,11 +1,12 @@
 'use client';
 
+import React, { useEffect } from 'react';
 import Joi from 'joi';
 import { joiResolver } from '@hookform/resolvers/joi';
 import { Controller, useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import Button from '../../components/atoms/Button';
-import TextInput from '../../components/atoms/TextInput';
+import Button from '@/app/components/atoms/Button';
+import TextInput from '@/app/components/atoms/TextInput';
 import { useAuth } from '@/hooks/useAuth';
 
 type LoginForm = {
@@ -13,26 +14,35 @@ type LoginForm = {
   password: string;
 };
 
-const Page = () => {
+const loginSchema = Joi.object({
+  email: Joi.string()
+    .email({ tlds: { allow: false } })
+    .required()
+    .messages({
+      'string.empty': 'E-mail wajib diisi',
+      'string.email': 'Format e-mail tidak valid',
+    }),
+  password: Joi.string().required().messages({
+    'string.empty': 'Password wajib diisi',
+  }),
+});
+
+export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth()
+  const { login, isAuthenticated, loading } = useAuth();
 
-  const schema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().required(),
-  });
-
-  const onSubmit = async (data: LoginForm) => {
-    return await login(data.email, data.password);
-  };
-
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.replace('/');
+    }
+  }, [loading, isAuthenticated, router]);
 
   const {
     handleSubmit,
     control,
     formState: { isSubmitting, isValid },
-  } = useForm({
-    resolver: joiResolver(schema),
+  } = useForm<LoginForm>({
+    resolver: joiResolver(loginSchema),
     mode: 'onChange',
     defaultValues: {
       email: '',
@@ -40,62 +50,73 @@ const Page = () => {
     },
   });
 
+  const onSubmit = async (data: LoginForm) => {
+    await login(data.email, data.password);
+  };
+
   return (
-    <>
-    <div className="space-y-6">
-      
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div>
+        <h2 className="font-display text-[28px] leading-[36px] text-[#251918]">
+          Operator Login
+        </h2>
+        <p className="mt-1 text-sm text-[#58413F]">
+          Masuk menggunakan akun operator BASARNAS yang terdaftar.
+        </p>
+      </div>
+
       <Controller
         name="email"
         control={control}
         render={({ field, fieldState }) => (
           <TextInput
             label="E-mail"
+            variant="outlined"
+            type="email"
+            placeholder="ops@basarnas.go.id"
             {...field}
             error={fieldState.error?.message}
+            disabled={isSubmitting}
           />
         )}
       />
-      
+
       <Controller
         name="password"
         control={control}
         render={({ field, fieldState }) => (
           <TextInput
             label="Password"
+            variant="outlined"
             type="password"
+            placeholder="Masukkan password"
             {...field}
             error={fieldState.error?.message}
+            disabled={isSubmitting}
           />
         )}
       />
-      
+
       <Button
-        label="Login"
+        type="submit"
+        label={isSubmitting ? 'Memverifikasi...' : 'Log in'}
         variant="contained"
         color="primary"
-        className="w-full h-12 rounded-xl"
+        fullWidth
+        className="h-12"
         disabled={!isValid || isSubmitting}
-        onClick={handleSubmit(onSubmit)}
       />
-      
-      <div className="text-white/80">
-        <p>Don't have an account?</p>
-      
+
+      <div className="border-t border-[#DFBFBC] pt-4 text-center text-[13px] text-[#58413F]">
+        Belum memiliki akun operator?{' '}
         <button
+          type="button"
           onClick={() => router.push('/register')}
-          className="
-            text-blue-400
-            hover:text-blue-300
-            underline
-          "
+          className="font-bold text-[#7E1117] underline decoration-[#7E1117]/40 underline-offset-4 transition duration-150 hover:text-[#9F2B2B] cursor-pointer"
         >
-          Sign in here
+          Informasi akun
         </button>
       </div>
-      
-    </div>
-    </>
+    </form>
   );
-};
-
-export default Page;
+}

@@ -1,124 +1,36 @@
 'use client';
 
-import React, {useState} from 'react'
-import { Controller, useForm } from 'react-hook-form';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '../../components/atoms/Button';
-import TextInput from '../../components/atoms/TextInput';
-import { joiResolver } from '@hookform/resolvers/joi';
-import { userSchema } from './schema';
-import { useAuth } from '@/hooks/useAuth';
-import { showToast } from '@/app/components/atoms/toast';
+import Button from '@/app/components/atoms/Button';
 
-
-type FormData = {
-  name: string;
-  email: string;
-  password: string;
-};
-
-const Page = () => {
+export default function RegisterInfoPage() {
   const router = useRouter();
-  const { register } = useAuth()
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-
-
-  const { // ini dekonstruksi dr objek yg dihasilkan dr useForm
-      handleSubmit,
-      control,
-      formState: { isSubmitting, isValid },
-    } = useForm<FormData>({ //
-      resolver: joiResolver(userSchema),
-      mode: 'onChange',
-      defaultValues: {
-        name: '',
-        email: '',
-        password: '',
-      },
-    }); 
-
-  const onSubmit = async(data:FormData) => {
-    // gimana cara aku dapetin value name, email n pass
-    const { name, email, password } = data // bisa dapetin data user
-    const regis = await register(name, email, password)
-
-    if (regis) {
-      showToast('berhasil registrasi','success')
-      router.push('/')
-
-    }
-    return regis
-  }
   return (
-    <>
-      <div className="space-y-6">
-            
-        <Controller
-          name="name"
-          control={control}
-          render={({ field, fieldState }) => (
-            <TextInput
-              label="Name"
-              {...field}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
-        <Controller
-          name="email"
-          control={control}
-          render={({ field, fieldState }) => (
-            <TextInput
-              label="E-mail"
-              {...field}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
-        
-        <Controller
-          name="password"
-          control={control}
-          render={({ field, fieldState }) => (
-            <TextInput
-              label="Password"
-              type="password"
-              {...field}
-              error={fieldState.error?.message}
-            />
-          )}
-        />
-        
-        <Button
-          label="Register"
-          variant="contained"
-          color="primary"
-          className="w-full h-12 rounded-xl"
-          disabled={!isValid || isSubmitting}
-          onClick={handleSubmit(onSubmit)}
-        />
-        
-        <div className="text-white/80">
-          <p>Don't have an account?</p>
-        
-          <button
-            onClick={() => router.push('/login')}
-            className="
-              text-blue-400
-              hover:text-blue-300
-              underline
-            "
-          >
-            login here
-          </button>
-        </div>
-            
+    <div className="space-y-5 text-center">
+      <div className="space-y-2">
+        <h2 className="font-display text-[28px] leading-[36px] text-[#251918]">
+          Akses Akun Operator
+        </h2>
+        <p className="text-sm leading-relaxed text-[#58413F]">
+          Pendaftaran publik dinonaktifkan untuk menjaga integritas operasional.
+          Akun operator dibuat oleh administrator melalui skrip backend{' '}
+          <code className="font-mono-tabular rounded bg-[#FFF0EF] px-1.5 py-0.5 text-xs text-[#7E1117]">
+            scripts.seed_operator
+          </code>
+          .
+        </p>
       </div>
-    </>
-  )
-}
 
-export default Page
+      <Button
+        label="Log in here"
+        variant="contained"
+        color="primary"
+        fullWidth
+        className="h-12"
+        onClick={() => router.push('/login')}
+      />
+    </div>
+  );
+}
