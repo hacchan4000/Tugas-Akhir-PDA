@@ -114,7 +114,7 @@ export default function LoginPage() {
           onClick={() => router.push('/register')}
           className="font-bold text-[#7E1117] underline decoration-[#7E1117]/40 underline-offset-4 transition duration-150 hover:text-[#9F2B2B] cursor-pointer"
         >
-          Informasi akun
+          Daftar akun baru
         </button>
       </div>
     </form>

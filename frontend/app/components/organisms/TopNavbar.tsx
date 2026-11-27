@@ -2,7 +2,6 @@
 
 import React from 'react';
 import {
-  MdAnalytics,
   MdHistory,
   MdLogout,
   MdOutlineShield,
@@ -14,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHist } from '@/hooks/useHist';
 import { cn } from '@/utils/classNames';
 
-export type WorkspaceTab = 'predict' | 'history' | 'model';
+export type WorkspaceTab = 'predict' | 'history';
 
 interface TopNavbarProps {
   activeTab: WorkspaceTab;
@@ -24,7 +23,6 @@ interface TopNavbarProps {
 const TABS: Array<{ id: WorkspaceTab; label: string; icon: React.ReactNode }> = [
   { id: 'predict', label: 'Prediksi & SAR', icon: <MdRadar className="text-lg" /> },
   { id: 'history', label: 'Riwayat & Ekspor', icon: <MdHistory className="text-lg" /> },
-  { id: 'model', label: 'Info Model', icon: <MdAnalytics className="text-lg" /> },
 ];
 
 export function TopNavbar({ activeTab, onChangeTab }: TopNavbarProps) {

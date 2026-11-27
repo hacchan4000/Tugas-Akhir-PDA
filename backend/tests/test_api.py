@@ -186,6 +186,47 @@ def test_login_rejects_wrong_password(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_register_creates_user_sets_cookie_and_allows_login(client: TestClient) -> None:
+    email_baru = "baru@basarnas.go.id"
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Operator Baru",
+            "email": f"  {email_baru.upper()}  ",
+            "password": PASSWORD,
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["name"] == "Operator Baru"
+    assert body["email"] == email_baru
+    assert "access_token" in response.cookies
+
+    me = client.get("/api/v1/auth/me")
+    assert me.status_code == 200
+    assert me.json()["email"] == email_baru
+
+    assert client.post("/api/v1/auth/logout").status_code == 204
+    relogin = client.post(
+        "/api/v1/auth/login", json={"email": email_baru, "password": PASSWORD}
+    )
+    assert relogin.status_code == 200
+    assert relogin.json()["email"] == email_baru
+
+
+def test_register_rejects_duplicate_email(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Duplikat",
+            "email": EMAIL_SATU.upper(),
+            "password": PASSWORD,
+        },
+    )
+    assert response.status_code == 409
+    assert "terdaftar" in response.json()["detail"].lower()
+
+
 def test_me_requires_login(client: TestClient) -> None:
     assert client.get("/api/v1/auth/me").status_code == 401
 

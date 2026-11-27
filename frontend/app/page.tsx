@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Card from '@/app/components/atoms/Card';
 import { HistorySection } from '@/app/components/organisms/HistorySection';
-import { ModelInfoSection } from '@/app/components/organisms/ModelInfoSection';
 import { PredictionDetailModal } from '@/app/components/organisms/PredictionDetailModal';
 import { PredictionForm } from '@/app/components/organisms/PredictionForm';
 import { PredictionResultCard } from '@/app/components/organisms/PredictionResultCard';
@@ -126,12 +125,6 @@ export default function HomePage() {
         {activeTab === 'history' && (
           <section>
             <HistorySection />
-          </section>
-        )}
-
-        {activeTab === 'model' && (
-          <section>
-            <ModelInfoSection />
           </section>
         )}
       </main>

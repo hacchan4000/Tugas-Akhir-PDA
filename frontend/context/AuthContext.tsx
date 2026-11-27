@@ -12,6 +12,7 @@ interface AuthContextProps {
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User | null>;
+  register: (name: string, email: string, password: string) => Promise<User | null>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<User | null>;
 }
@@ -21,6 +22,7 @@ export const AuthContext = createContext<AuthContextProps>({
   loading: true,
   isAuthenticated: false,
   login: async () => null,
+  register: async () => null,
   logout: async () => {},
   refreshUser: async () => null,
 });
@@ -77,6 +79,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [router]
   );
 
+  const register = useCallback(
+    async (name: string, email: string, password: string): Promise<User | null> => {
+      try {
+        const registeredUser = await AuthService.register({ name, email, password });
+        setUser(registeredUser);
+        showToast(`Akun ${registeredUser.name} berhasil didaftarkan`, 'success');
+        router.push('/');
+        return registeredUser;
+      } catch (error) {
+        const message = getErrorMessage(error);
+        showToast(message, 'error');
+        return null;
+      }
+    },
+    [router]
+  );
+
   const logout = useCallback(async (): Promise<void> => {
     try {
       await AuthService.logout();
@@ -96,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         isAuthenticated: Boolean(user),
         login,
+        register,
         logout,
         refreshUser,
       }}

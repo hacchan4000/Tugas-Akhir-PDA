@@ -1,4 +1,4 @@
-"""Endpoint auth: login (cookie), logout, profil operator."""
+"""Endpoint auth: login (cookie), registrasi akun, logout, profil operator."""
 
 from __future__ import annotations
 
@@ -7,9 +7,11 @@ from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from app.config import Settings
 from app.dependencies.deps import AppSettings, CurrentUser, DbSession, LoginLimiterDep
-from app.schemas.auth import LoginRequest, UserResponse
+from app.schemas.auth import LoginRequest, RegisterRequest, UserResponse
 from app.services import auth_service
+from app.services.auth_service import EmailAlreadyRegisteredError
 from app.utils.security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -24,6 +26,46 @@ def _client_key(request: Request) -> str:
     """
     client = request.client
     return client.host if client is not None else "unknown"
+
+
+def _set_auth_cookie(response: Response, user_id: int, settings: Settings) -> None:
+    token = create_access_token(
+        user_id,
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    response.set_cookie(
+        key=settings.COOKIE_NAME,
+        value=token,
+        max_age=settings.access_token_max_age,
+        httponly=True,
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE,
+        path="/",
+    )
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register(
+    payload: RegisterRequest,
+    response: Response,
+    db: DbSession,
+    settings: AppSettings,
+) -> UserResponse:
+    try:
+        user = auth_service.register(
+            db,
+            name=payload.name,
+            email=payload.email,
+            password=payload.password,
+        )
+    except EmailAlreadyRegisteredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from None
+
+    _set_auth_cookie(response, user.user_id, settings)
+    return UserResponse.model_validate(user)
 
 
 @router.post("/login", response_model=UserResponse)
@@ -59,20 +101,7 @@ def login(
     # Login berhasil mengosongkan hitungan: operator sah yang sempat salah
     # password tidak perlu menunggu jendela waktu habis.
     limiter.reset(key)
-
-    token = create_access_token(
-        user.user_id,
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
-    response.set_cookie(
-        key=settings.COOKIE_NAME,
-        value=token,
-        max_age=settings.access_token_max_age,
-        httponly=True,
-        samesite=settings.COOKIE_SAMESITE,
-        secure=settings.COOKIE_SECURE,
-        path="/",
-    )
+    _set_auth_cookie(response, user.user_id, settings)
     return UserResponse.model_validate(user)
 
 

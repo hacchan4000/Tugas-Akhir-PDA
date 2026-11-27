@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.main import _ERROR_MESSAGES, _translate
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import LoginRequest, RegisterRequest
 from app.schemas.prediction import PredictionCreate
 
 DASAR: dict[str, Any] = {
@@ -55,6 +55,16 @@ KASUS_LOGIN: dict[str, Any] = {
     "email hilang": {"password": "rahasia123"},
 }
 
+KASUS_REGISTER: dict[str, Any] = {
+    "nama kosong": {"name": "   ", "email": "a@b.co", "password": "rahasia123"},
+    "nama terlalu pendek": {"name": "A", "email": "a@b.co", "password": "rahasia123"},
+    "nama terlalu panjang": {"name": "x" * 101, "email": "a@b.co", "password": "rahasia123"},
+    "email bukan email": {"name": "Budi", "email": "bukan-email", "password": "rahasia123"},
+    "password pendek": {"name": "Budi", "email": "a@b.co", "password": "123"},
+    "password terlalu panjang": {"name": "Budi", "email": "a@b.co", "password": "a" * 73},
+    "field asing": {"name": "Budi", "email": "a@b.co", "password": "rahasia123", "role": "admin"},
+}
+
 
 def _types() -> set[tuple[str, str]]:
     hasil: set[tuple[str, str]] = set()
@@ -66,6 +76,11 @@ def _types() -> set[tuple[str, str]]:
     for label, payload in KASUS_LOGIN.items():
         with pytest.raises(ValidationError) as info:
             LoginRequest.model_validate(payload)
+        for error in info.value.errors():
+            hasil.add((str(error["type"]), label))
+    for label, payload in KASUS_REGISTER.items():
+        with pytest.raises(ValidationError) as info:
+            RegisterRequest.model_validate(payload)
         for error in info.value.errors():
             hasil.add((str(error["type"]), label))
     return hasil
